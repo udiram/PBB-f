@@ -2,22 +2,17 @@ package com.example.projectbigbrother.ui.login
 
 import android.content.Intent
 import android.os.Bundle
-import android.text.TextUtils
 import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.example.projectbigbrother.MainActivity
 import com.example.projectbigbrother.R
-import com.example.projectbigbrother.ui.home.HomeFragment
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody
-import org.json.JSONObject
-import java.io.IOException
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import org.json.JSONObject
+import java.io.IOException
 
 class SignUpActivity : AppCompatActivity() {
 
@@ -47,36 +42,28 @@ class SignUpActivity : AppCompatActivity() {
             val password = passwordField.text.toString().trim()
 
             if (validateInputs(firstName, lastName, email, password)) {
-                Log.d(
-                    "SignupActivity",
-                    "Sign-up button clicked with data: $firstName $lastName $email"
-                )
+                Log.d("SignUpActivity", "Sign-up button clicked with data: $firstName $lastName $email")
                 signUpUser(firstName, lastName, email, password)
             } else {
-                Log.d("SignupActivity", "Validation failed")
+                Log.d("SignUpActivity", "Validation failed")
             }
         }
     }
 
-    private fun validateInputs(
-        firstName: String,
-        lastName: String,
-        email: String,
-        password: String
-    ): Boolean {
-        if (TextUtils.isEmpty(firstName)) {
+    private fun validateInputs(firstName: String, lastName: String, email: String, password: String): Boolean {
+        if (firstName.isEmpty()) {
             firstNameField.error = "First name is required"
             return false
         }
-        if (TextUtils.isEmpty(lastName)) {
+        if (lastName.isEmpty()) {
             lastNameField.error = "Last name is required"
             return false
         }
-        if (TextUtils.isEmpty(email)) {
+        if (email.isEmpty()) {
             emailField.error = "Email is required"
             return false
         }
-        if (TextUtils.isEmpty(password)) {
+        if (password.isEmpty()) {
             passwordField.error = "Password is required"
             return false
         }
@@ -101,61 +88,26 @@ class SignUpActivity : AppCompatActivity() {
             .post(requestBody)
             .build()
 
-        val client = OkHttpClient()
-
-        client.newCall(request).enqueue(object : okhttp3.Callback {
-            override fun onFailure(call: okhttp3.Call, e: IOException) {
-                // Log the error
-                e.printStackTrace()
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e("SignUpActivity", "Network request failed: ${e.message}")
                 runOnUiThread {
                     Toast.makeText(
                         this@SignUpActivity,
-                        "Failed to sign up: ${e.message}",
+                        "Failed to connect to server: ${e.message}",
                         Toast.LENGTH_SHORT
                     ).show()
                 }
             }
 
-            override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+            override fun onResponse(call: Call, response: Response) {
                 val responseBody = response.body?.string() ?: "No response body"
+                Log.d("SignUpActivity", "Response: $responseBody")
+
                 runOnUiThread {
                     if (response.isSuccessful) {
-                        try {
-                            val jsonResponse = JSONObject(responseBody)
-                            if (jsonResponse.getBoolean("success")) {
-                                val authToken = jsonResponse.getString("token")
-
-                                // Save token (use secure storage in production apps)
-                                val sharedPreferences =
-                                    getSharedPreferences("AppPrefs", MODE_PRIVATE)
-                                val editor = sharedPreferences.edit()
-                                editor.putString("auth_token", authToken)
-                                editor.apply()
-
-                                Toast.makeText(
-                                    this@SignUpActivity,
-                                    "Sign-up successful! Logging you in...",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-
-                                // Navigate to HomeActivity or HomeFragment
-                                val intent = Intent(this@SignUpActivity, HomeFragment::class.java)
-                                startActivity(intent)
-                                finish()
-                            } else {
-                                Toast.makeText(
-                                    this@SignUpActivity,
-                                    "Sign-up failed: ${jsonResponse.getString("message")}",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                            }
-                        } catch (e: Exception) {
-                            Toast.makeText(
-                                this@SignUpActivity,
-                                "Unexpected response: $responseBody",
-                                Toast.LENGTH_LONG
-                            ).show()
-                        }
+                        Toast.makeText(this@SignUpActivity, "Sign-up successful!", Toast.LENGTH_SHORT).show()
+                        navigateToMainActivity()
                     } else {
                         Toast.makeText(
                             this@SignUpActivity,
@@ -166,5 +118,11 @@ class SignUpActivity : AppCompatActivity() {
                 }
             }
         })
+    }
+
+    private fun navigateToMainActivity() {
+        val intent = Intent(this@SignUpActivity, MainActivity::class.java)
+        startActivity(intent)
+        finish() // Close the current activity to prevent navigating back to it
     }
 }
