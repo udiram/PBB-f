@@ -9,6 +9,7 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.projectbigbrother.R
+import com.example.projectbigbrother.ui.home.HomeFragment
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -117,19 +118,45 @@ class SignUpActivity : AppCompatActivity() {
 
             override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
                 val responseBody = response.body?.string() ?: "No response body"
-                if (response.isSuccessful) {
-                    runOnUiThread {
-                        Toast.makeText(
-                            this@SignUpActivity,
-                            "Sign-up successful!",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                        val intent = Intent(this@SignUpActivity, LoginActivity::class.java)
-                        startActivity(intent)
-                        finish()
-                    }
-                } else {
-                    runOnUiThread {
+                runOnUiThread {
+                    if (response.isSuccessful) {
+                        try {
+                            val jsonResponse = JSONObject(responseBody)
+                            if (jsonResponse.getBoolean("success")) {
+                                val authToken = jsonResponse.getString("token")
+
+                                // Save token (use secure storage in production apps)
+                                val sharedPreferences =
+                                    getSharedPreferences("AppPrefs", MODE_PRIVATE)
+                                val editor = sharedPreferences.edit()
+                                editor.putString("auth_token", authToken)
+                                editor.apply()
+
+                                Toast.makeText(
+                                    this@SignUpActivity,
+                                    "Sign-up successful! Logging you in...",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+
+                                // Navigate to HomeActivity or HomeFragment
+                                val intent = Intent(this@SignUpActivity, HomeFragment::class.java)
+                                startActivity(intent)
+                                finish()
+                            } else {
+                                Toast.makeText(
+                                    this@SignUpActivity,
+                                    "Sign-up failed: ${jsonResponse.getString("message")}",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        } catch (e: Exception) {
+                            Toast.makeText(
+                                this@SignUpActivity,
+                                "Unexpected response: $responseBody",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    } else {
                         Toast.makeText(
                             this@SignUpActivity,
                             "Sign-up failed: ${response.code} $responseBody",
